@@ -8,7 +8,7 @@ import { useCart } from "@/context/CartContext";
 export default function RestaurantDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { addItem, state } = useCart();
+  const { addItem, updateQty, state } = useCart();
   const [activeCategory, setActiveCategory] = useState("All");
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
 
@@ -199,13 +199,18 @@ export default function RestaurantDetailPage() {
                       }}
                     >
                       <button
-                        onClick={() => {
-                          const { updateQty } = useCart();
-                        }}
+                        onClick={() => updateQty(item.id, qty - 1)}
                         style={{ background: "none", border: "none", color: "#ff6b35", fontSize: 18, cursor: "pointer", fontWeight: 700 }}
-                        onClick={() => handleAdd(item)}
-                      >+</button>
+                      >
+                        −
+                      </button>
                       <span style={{ fontWeight: 700, minWidth: 20, textAlign: "center" }}>{qty}</span>
+                      <button
+                        onClick={() => updateQty(item.id, qty + 1)}
+                        style={{ background: "none", border: "none", color: "#ff6b35", fontSize: 18, cursor: "pointer", fontWeight: 700 }}
+                      >
+                        +
+                      </button>
                     </div>
                   )}
                 </div>
