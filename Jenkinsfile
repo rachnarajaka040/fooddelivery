@@ -5,6 +5,8 @@ node {
         deleteDir()
     }
 
+
+
     stage('Deploy to EC2') {
         sh """
             sudo mkdir -p ${appDir}
