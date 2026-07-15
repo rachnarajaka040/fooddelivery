@@ -58,6 +58,7 @@ export default function CartPage() {
                 className="btn-primary"
                 onClick={() => router.push("/restaurants")}
               >
+                
                 Browse Restaurants
               </button>
             </div>
