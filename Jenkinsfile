@@ -7,7 +7,7 @@ node {
     stage('Clone Repo'){
         echo "Cloning the repo"
         git(
-            branch :'main'
+            branch :'main',
             url:"https://github.com/rachnarajaka040/fooddelivery.git"
         )
     }
