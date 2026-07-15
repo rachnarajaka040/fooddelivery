@@ -12,7 +12,6 @@ const ORDER_STEPS = [
 ];
 
 
-
 export default function TrackPage() {
   const { state, clearCart } = useCart();
   const router = useRouter();
