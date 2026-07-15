@@ -57,8 +57,7 @@ export default function CartPage() {
                 id="browse-restaurants-btn"
                 className="btn-primary"
                 onClick={() => router.push("/restaurants")}
-              >
-                
+              >  
                 Browse Restaurants
               </button>
             </div>
