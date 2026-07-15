@@ -9,6 +9,7 @@ node {
         git branch: 'main', url: 'https://github.com/rachnarajaka040/fooddelivery.git'
     }
 
+
     stage('Deploy') {
         // Yeh line ensure karegi ki Jenkins sahi directory se files uthaye
         dir("${env.WORKSPACE}") {
