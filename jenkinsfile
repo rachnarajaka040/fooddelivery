@@ -1,180 +1,36 @@
-pipeline {
-    agent any
-
-    environment {
-        APP_NAME = "foodrush"
-        DOCKER_IMAGE = "foodrush-nextjs"
-        DOCKER_TAG = "${BUILD_NUMBER}"
-        NODE_VERSION = "18"
-        PORT = "3000"
+node {
+    def appDir='var/www/nextjs-app'
+    stage('Clean worksapce'){
+        echo "cleaning workspace"
+        deleteDir()
     }
-
-    tools {
-        nodejs "NodeJS-18"
+    stage('Clone Repo'){
+        echo "Cloning the repo"
+        git(
+            branch :'main'
+            url:"https://github.com/rachnarajaka040/fooddelivery.git"
+        )
     }
+    stage('Deploy to EC2')
+    {
+        echo "Deploying to EC2"
+        sh """
+              sudo mkdir -p ${appDir}
+              sudo chown -R
+              jenkins:jenkins ${appDir}
 
-    options {
-        buildDiscarder(logRotator(numToKeepStr: '10'))
-        timeout(time: 30, unit: 'MINUTES')
-        timestamps()
-    }
+              rsync -av --delete 
+              --exclude='.git'
+              --exclude='node_modules'
+              /${appDir}
 
-    stages {
+              cd ${appDir}
+              sudo npm install
+              sudo npm run build
+              sudo fuser -k 3000/tcp ||
+              true
+              npm run start
 
-        // ─── STAGE 1: CHECKOUT ───────────────────────────────────────
-        stage('📥 Checkout') {
-            steps {
-                echo '========================================='
-                echo '   Checking out source code from Git   '
-                echo '========================================='
-                checkout scm
-                sh 'echo "Branch: $GIT_BRANCH | Commit: $GIT_COMMIT"'
-            }
-        }
-
-        // ─── STAGE 2: INSTALL DEPENDENCIES ───────────────────────────
-        stage('📦 Install Dependencies') {
-            steps {
-                echo '========================================='
-                echo '       Installing npm packages          '
-                echo '========================================='
-                sh '''
-                    node --version
-                    npm --version
-                    npm ci --prefer-offline
-                '''
-            }
-        }
-
-        // ─── STAGE 3: LINT ────────────────────────────────────────────
-        stage('🔍 Lint') {
-            steps {
-                echo '========================================='
-                echo '       Running ESLint checks            '
-                echo '========================================='
-                sh 'npm run lint'
-            }
-        }
-
-        // ─── STAGE 4: BUILD ───────────────────────────────────────────
-        stage('🔨 Build') {
-            steps {
-                echo '========================================='
-                echo '       Building Next.js application     '
-                echo '========================================='
-                sh '''
-                    npm run build
-                    echo "Build completed successfully!"
-                    ls -la .next/
-                '''
-            }
-            post {
-                success {
-                    echo 'Build stage PASSED'
-                    archiveArtifacts artifacts: '.next/**/*', fingerprint: true, allowEmptyArchive: true
-                }
-                failure {
-                    echo 'Build stage FAILED'
-                }
-            }
-        }
-
-        // ─── STAGE 5: DOCKER BUILD ────────────────────────────────────
-        stage('🐳 Docker Build') {
-            when {
-                anyOf {
-                    branch 'main'
-                    branch 'master'
-                    branch 'develop'
-                }
-            }
-            steps {
-                echo '========================================='
-                echo '       Building Docker image            '
-                echo '========================================='
-                script {
-                    def image = docker.build("${DOCKER_IMAGE}:${DOCKER_TAG}")
-                    docker.withRegistry('https://registry.hub.docker.com', 'dockerhub-credentials') {
-                        image.push("${DOCKER_TAG}")
-                        image.push("latest")
-                        echo "Docker image pushed: ${DOCKER_IMAGE}:${DOCKER_TAG}"
-                    }
-                }
-            }
-        }
-
-        // ─── STAGE 6: DEPLOY TO STAGING ──────────────────────────────
-        stage('🚀 Deploy Staging') {
-            when {
-                branch 'develop'
-            }
-            steps {
-                echo '========================================='
-                echo '         Deploying to Staging           '
-                echo '========================================='
-                sh '''
-                    docker stop foodrush-staging || true
-                    docker rm foodrush-staging || true
-                    docker run -d \
-                        --name foodrush-staging \
-                        -p 3001:3000 \
-                        --restart unless-stopped \
-                        -e NODE_ENV=staging \
-                        ${DOCKER_IMAGE}:${DOCKER_TAG}
-                    echo "Staging deployed at http://localhost:3001"
-                '''
-            }
-        }
-
-        // ─── STAGE 7: DEPLOY TO PRODUCTION ───────────────────────────
-        stage('🌟 Deploy Production') {
-            when {
-                anyOf {
-                    branch 'main'
-                    branch 'master'
-                }
-            }
-            steps {
-                echo '========================================='
-                echo '       Deploying to Production          '
-                echo '========================================='
-                input(
-                    message: 'Deploy to PRODUCTION?',
-                    ok: 'Yes, Deploy!'
-                )
-                sh '''
-                    docker stop foodrush-prod || true
-                    docker rm foodrush-prod || true
-                    docker run -d \
-                        --name foodrush-prod \
-                        -p 3000:3000 \
-                        --restart always \
-                        -e NODE_ENV=production \
-                        ${DOCKER_IMAGE}:${DOCKER_TAG}
-                    echo "Production deployed at http://localhost:3000"
-                '''
-            }
-            post {
-                success {
-                    echo 'Production deployment SUCCESSFUL!'
-                }
-            }
-        }
-    }
-
-    // ─── POST ACTIONS ─────────────────────────────────────────────────
-    post {
-        always {
-            echo '========================================='
-            echo '          Pipeline Finished             '
-            echo '========================================='
-            cleanWs()
-        }
-        success {
-            echo 'Pipeline SUCCEEDED'
-        }
-        failure {
-            echo 'Pipeline FAILED'
-        }
+        """
     }
 }
